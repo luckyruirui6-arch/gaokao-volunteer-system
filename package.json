@@ -6,9 +6,6 @@
   "scripts": {
     "start": "node server/server.js"
   },
-  "dependencies": {
-    "better-sqlite3": "^12.8.0"
-  },
   "engines": {
     "node": ">=18"
   }
