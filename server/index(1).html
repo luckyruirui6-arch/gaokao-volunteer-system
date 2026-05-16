@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小陈志愿咨询器</title>
+  <meta name="description" content="小陈志愿咨询器首页，展示高考志愿知识关系图谱并进入咨询对话。" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="theme-apple-light">
+  <canvas id="particle-canvas"></canvas>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="grid-mask"></div>
+
+  <header class="site-header shell">
+    <div class="brand-wrap">
+      <div>
+        <p class="brand-subtitle">高考志愿咨询</p>
+        <h1>小陈志愿咨询器</h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell home-stack">
+    <section class="glass hero-home reveal">
+      <div class="hero-home-copy">
+        <h2 class="hero-home-text hero-home-text--tribute" id="typewriter-text"></h2>
+        <div class="hero-home-actions" id="hero-actions" style="opacity: 0; transform: translateY(15px); pointer-events: none;">
+          <a class="primary-btn enter-chat-btn" href="/chat.html">进入咨询对话框</a>
+          <span class="hero-home-note">当前重点支持公办本科，历史录取数据仅供参考。</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="graph-shell reveal-delay-1">
+      <div class="glass graph-board">
+        <div class="section-head compact-head graph-head">
+          <div>
+            <h3>知识关系图谱</h3>
+          </div>
+        </div>
+
+        <div class="graph-layout">
+          <div class="graph-stage" id="graph-stage" data-active="policy">
+            <svg class="graph-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="grad-1" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ea4335" />
+                  <stop offset="100%" stop-color="#4285f4" />
+                </linearGradient>
+                <linearGradient id="grad-2" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#34a853" />
+                  <stop offset="100%" stop-color="#4285f4" />
+                </linearGradient>
+                <linearGradient id="grad-3" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#fbbc05" />
+                  <stop offset="100%" stop-color="#4285f4" />
+                </linearGradient>
+                <linearGradient id="grad-4" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#4285f4" />
+                  <stop offset="100%" stop-color="#34a853" />
+                </linearGradient>
+                <linearGradient id="grad-5" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#4285f4" />
+                  <stop offset="100%" stop-color="#ea4335" />
+                </linearGradient>
+                <linearGradient id="grad-6" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#4285f4" />
+                  <stop offset="100%" stop-color="#9c27b0" />
+                </linearGradient>
+                <linearGradient id="grad-7" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#4285f4" />
+                  <stop offset="100%" stop-color="#e91e63" />
+                </linearGradient>
+              </defs>
+              <path class="line-policy" vector-effect="non-scaling-stroke" d="M 17 16 C 36 16, 36 38, 49 38" />
+              <path class="line-province" vector-effect="non-scaling-stroke" d="M 19 47 C 36 47, 36 38, 49 38" />
+              <path class="line-score" vector-effect="non-scaling-stroke" d="M 21 80 C 36 80, 36 38, 49 38" />
+              <path class="line-school" vector-effect="non-scaling-stroke" d="M 49 38 C 66 38, 66 17, 82 17" />
+              <path class="line-major" vector-effect="non-scaling-stroke" d="M 49 38 C 66 38, 66 46, 82 46" />
+              <path class="line-style" vector-effect="non-scaling-stroke" d="M 49 38 C 66 38, 66 75, 81 75" />
+              <path class="line-core-bottom" vector-effect="non-scaling-stroke" d="M 49 38 L 49 80" />
+            </svg>
+
+            <button class="graph-node graph-node-policy is-active" data-node="policy" style="left: 8%; top: 9%;">
+              <span class="graph-node-title">政策规则</span>
+              <span class="graph-node-meta">各省制度与特殊招生</span>
+            </button>
+
+            <button class="graph-node graph-node-province" data-node="province" style="left: 10%; top: 40%;">
+              <span class="graph-node-title">省份数据</span>
+              <span class="graph-node-meta">录取总览与数据口径</span>
+            </button>
+
+            <button class="graph-node graph-node-score" data-node="score" style="left: 12%; top: 71%;">
+              <span class="graph-node-title">录取数据</span>
+              <span class="graph-node-meta">学校 / 专业历史分数</span>
+            </button>
+
+            <button class="graph-node graph-node-core" data-node="route" style="left: 39%; top: 30%;">
+              <span class="graph-node-title">问题路由</span>
+              <span class="graph-node-meta">先分类，再检索，再回答</span>
+            </button>
+
+            <button class="graph-node graph-node-school" data-node="school" style="left: 73%; top: 10%;">
+              <span class="graph-node-title">院校库</span>
+              <span class="graph-node-meta">学校定位与报考风险</span>
+            </button>
+
+            <button class="graph-node graph-node-major" data-node="major" style="left: 73%; top: 39%;">
+              <span class="graph-node-title">专业库</span>
+              <span class="graph-node-meta">优缺点与未来前景</span>
+            </button>
+
+            <button class="graph-node graph-node-style" data-node="style" style="left: 72%; top: 68%;">
+              <span class="graph-node-title">风格与案例</span>
+              <span class="graph-node-meta">表达模板与咨询场景</span>
+            </button>
+
+            <button class="graph-node graph-node-mini" data-node="explain" style="left: 39%; top: 72%;">
+              <span class="graph-node-title">回答生成</span>
+              <span class="graph-node-meta">贴着数据给结论</span>
+            </button>
+          </div>
+
+          <aside class="graph-detail glass-subtle" id="graph-detail">
+            <p class="graph-detail-label">当前节点</p>
+            <h4 id="graph-detail-title">政策规则</h4>
+            <p id="graph-detail-body">
+              这一层沉淀的是各省高考制度、赋分规则、提前批、专项、特招、公费与定向路径。它决定了“能不能报、怎么报、什么时候要特别小心”。
+            </p>
+            <ul class="graph-detail-list" id="graph-detail-list">
+              <li>先判断省份制度差异</li>
+              <li>再决定后面是看学校、专业还是录取数据</li>
+              <li>遇到提前批、专项、公费时必须优先参考这一层</li>
+            </ul>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./shared.js"></script>
+  <script src="./home.js"></script>
+</body>
+</html>

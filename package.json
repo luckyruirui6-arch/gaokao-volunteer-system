@@ -1,0 +1,15 @@
+{
+  "name": "gaokao-volunteer-system",
+  "version": "1.0.0",
+  "description": "Gaokao Volunteer Consultation System",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

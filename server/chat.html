@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小陈志愿咨询器</title>
+  <meta name="description" content="小陈志愿咨询器，高考志愿对话工作台。" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="theme-apple-light">
+  <canvas id="particle-canvas"></canvas>
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="grid-mask"></div>
+
+  <header class="site-header shell">
+    <div class="brand-wrap">
+      <div>
+        <p class="brand-subtitle">高考志愿咨询</p>
+        <h1>小陈志愿咨询器</h1>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell page-stack">
+    <section class="notice-strip glass reveal">
+      当前知识库重点支持公办本科，仅供参考，不代表你今年一定会按该结果录取。最终请以官方公布信息为准。
+    </section>
+
+    <section id="chat-section" class="workspace-shell reveal-delay-1">
+      <div class="glass chat-card chat-main">
+        <div class="section-head compact-head">
+          <div>
+            <h3>咨询对话框</h3>
+          </div>
+        </div>
+
+        <div class="queue-panel hidden" id="queue-panel">
+          <div class="queue-top">
+            <strong>当前请求正在排队</strong>
+            <span id="queue-text">前方 0 人</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="queue-progress"></div>
+          </div>
+          <p class="queue-hint">当并发达到上限时，系统会自动进入排队模式。轮到你后会自动继续请求。</p>
+        </div>
+
+        <div class="chat-stack">
+          <div class="message-stream glass-subtle" id="message-stream"></div>
+
+          <form id="chat-form" class="chat-form">
+            <div class="composer-shell glass-subtle">
+              <textarea
+                id="user-prompt"
+                rows="4"
+                placeholder="例如：江苏考生，物化地，620 分，想学电子信息，未来想留长三角就业，请按冲稳保思路分析。"
+              ></textarea>
+              <div class="chat-actions">
+                <button type="submit" class="primary-btn send-btn" aria-label="发送问题" title="发送问题">
+                  <span class="send-icon" aria-hidden="true">↑</span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <aside id="help-panel" class="glass help-card">
+        <div class="section-head compact-head">
+          <div>
+            <h3>怎么问更有效</h3>
+          </div>
+        </div>
+        <div class="help-copy">
+          <p>当前数据库主要包含这几类内容：各省政策规则、各省录取数据总览、公办本科院校、专业分析、家庭约束标签、情绪沟通模板和案例库。</p>
+          <p>想问得更准，尽量一次把条件说完整：先告诉我你是哪个省的考生，再说分数或位次、选科、想学的专业方向，以及你更看重城市、就业、考研还是考公。</p>
+          <p>如果你不确定学校名单，也没关系，先把你的分数段、目标方向和现实约束说清楚，我会先帮你把方向定下来，再谈学校和专业怎么选。</p>
+          <p><strong>快捷键：</strong>Enter 直接发送，Shift + Enter 换行。</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="modal hidden" id="ad-modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card glass">
+      <p class="micro-label">AD COUNTDOWN</p>
+      <h3>广告播放中</h3>
+      <p>倒计时结束后恢复 5 次提问。</p>
+      <div class="countdown-ring"><span id="ad-countdown">30</span></div>
+      <button class="ghost-btn" id="close-ad-btn" disabled>请等待倒计时结束</button>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="queue-modal" aria-hidden="true">
+    <div class="modal-backdrop"></div>
+    <div class="modal-card glass queue-modal-card">
+      <h3>当前需要排队</h3>
+      <p id="queue-modal-text">前方约 1 个请求</p>
+      <div class="progress-track modal-progress-track">
+        <div class="progress-fill" id="queue-modal-progress"></div>
+      </div>
+      <p class="queue-modal-hint">轮到你后会自动继续，无需重复发送。</p>
+    </div>
+  </div>
+
+  <template id="message-template">
+    <article class="message">
+      <span class="message-role"></span>
+      <div class="message-body"></div>
+    </article>
+  </template>
+
+  <script src="./shared.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

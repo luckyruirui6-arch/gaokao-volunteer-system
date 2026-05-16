@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>志愿镜像 · 后端控制</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body class="theme-obsidian">
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="grid-mask"></div>
+  <header class="site-header shell">
+    <div class="brand-wrap">
+      <div class="brand-badge">Z</div>
+      <div>
+        <p class="micro-label">BACKEND CONTROL</p>
+        <h1>后端控制台</h1>
+      </div>
+    </div>
+    <nav class="top-nav">
+      <a href="./index.html" class="nav-ghost">返回前台</a>
+    </nav>
+  </header>
+
+  <main class="shell page-stack">
+    <section class="glass hero-panel reveal">
+      <p class="micro-label">CONTROL CENTER</p>
+      <h2>把接口、工作区和并发限制放到后台，不打扰前端用户。</h2>
+      <p class="hero-text">这个页面只负责控制后端参数。前台会自动读取这里的配置，并在并发达到上限时显示排队和进度。</p>
+    </section>
+
+    <section class="feature-shell reveal-delay-1">
+      <div class="section-head"><div><p class="micro-label">API</p><h3>接口配置</h3></div></div>
+      <div class="glass compact-card">
+        <div class="admin-grid">
+          <label><span>接入模式</span><select id="provider-select"><option value="anythingllm">AnythingLLM</option><option value="openai-compatible">OpenAI Compatible</option><option value="anthropic-compatible">Anthropic Compatible</option><option value="future-cloud">Future Cloud API</option></select></label>
+          <label><span>Base URL</span><input id="base-url" type="text" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1" /></label>
+          <label><span>工作区 / 模型</span><input id="workspace-slug" type="text" placeholder="beijing-gaokao / qwen / gpt" /></label>
+          <label><span>API Key</span><input id="api-key" type="password" placeholder="可留空或按后端要求填写" /></label>
+          <label><span>Qdrant URL</span><input id="qdrant-url" type="text" placeholder="http://127.0.0.1:6333" /></label>
+          <label><span>Embeddings URL</span><input id="embeddings-url" type="text" placeholder="http://127.0.0.1:1234/v1/embeddings" /></label>
+          <label><span>Embedding 模型</span><input id="embedding-model" type="text" placeholder="text-embedding-qwen3-embedding-4b" /></label>
+          <label><span>每个 collection 的 TopK</span><input id="topk-per-collection" type="number" min="1" max="20" /></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature-shell reveal-delay-2">
+      <div class="section-head"><div><p class="micro-label">PROMPT</p><h3>系统提示词</h3></div></div>
+      <div class="glass compact-card">
+        <label class="stacked-field">
+          <span>后端系统提示词</span>
+          <textarea id="system-prompt" rows="14" placeholder="在这里直接修改后端系统提示词。"></textarea>
+        </label>
+      </div>
+    </section>
+
+    <section class="feature-shell reveal-delay-3">
+      <div class="section-head"><div><p class="micro-label">CONCURRENCY</p><h3>并发与排队</h3></div></div>
+      <div class="glass compact-card">
+        <div class="admin-grid">
+          <label><span>最大并发数</span><input id="max-concurrency" type="number" min="1" max="100" /></label>
+          <label><span>排队轮询间隔（毫秒）</span><input id="queue-step-ms" type="number" min="500" step="100" /></label>
+          <label><span>前端排队可视化时长（秒）</span><input id="queue-visual-seconds" type="number" min="3" max="60" /></label>
+        </div>
+        <div class="chat-actions">
+          <div class="meta-stack">
+            <span>前台现在会真实读取后端并发状态，不再靠本地存储模拟。</span>
+            <span>专业题、政策题、分数题会先按 Qdrant 路由分流，再走模型回答。</span>
+          </div>
+          <button class="primary-btn" id="save-admin-btn">保存后台配置</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature-shell reveal-delay-4">
+      <div class="section-head"><div><p class="micro-label">ADS</p><h3>广告与奖励配置</h3></div></div>
+      <div class="glass compact-card">
+        <div class="admin-grid">
+          <label><span>启用广告门槛</span><select id="ad-enabled"><option value="true">开启</option><option value="false">关闭</option></select></label>
+          <label><span>广告模式</span><select id="ad-mode"><option value="local-timer">本地倒计时</option><option value="api">广告 API</option></select></label>
+          <label><span>调试直通</span><select id="ad-debug-bypass"><option value="false">关闭</option><option value="true">开启</option></select></label>
+          <label><span>广告秒数</span><input id="ad-duration-seconds" type="number" min="1" max="300" /></label>
+          <label><span>奖励问题数</span><input id="ad-reward-questions" type="number" min="1" max="100" /></label>
+          <label><span>广告 API Base URL</span><input id="ad-api-base-url" type="text" placeholder="https://example.com/ad-api" /></label>
+          <label><span>奖励接口路径</span><input id="ad-reward-path" type="text" placeholder="/reward" /></label>
+          <label><span>校验接口路径</span><input id="ad-verify-path" type="text" placeholder="/verify" /></label>
+          <label><span>广告 App ID</span><input id="ad-app-id" type="text" placeholder="app id" /></label>
+          <label><span>广告位 Slot ID</span><input id="ad-slot-id" type="text" placeholder="slot id" /></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="feature-shell reveal-delay-5">
+      <div class="section-head"><div><p class="micro-label">STATUS</p><h3>当前生效状态</h3></div></div>
+      <div class="glass compact-card"><div class="hero-status" id="status-badges"></div></div>
+    </section>
+  </main>
+  <script src="./shared.js"></script>
+  <script src="./admin.js"></script>
+</body>
+</html>
