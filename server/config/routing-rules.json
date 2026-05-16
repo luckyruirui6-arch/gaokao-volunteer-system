@@ -1,0 +1,44 @@
+{
+  "routes": [
+    {
+      "id": "school_consult",
+      "name": "学校咨询",
+      "trigger": ["大学", "学院", "学校", "院校", "报考", "录取", "分数线", "位次"],
+      "priorityCollections": ["gaokao_schools"],
+      "fallbackCollections": ["gaokao_majors", "gaokao_style_cases", "gaokao_policies_rules"],
+      "avoidCollections": []
+    },
+    {
+      "id": "major_consult",
+      "name": "专业咨询",
+      "trigger": ["专业", "学科", "学什么", "就业", "前景", "方向", "课程", "考研", "保研"],
+      "priorityCollections": ["gaokao_majors", "gaokao_style_cases"],
+      "fallbackCollections": ["gaokao_schools", "gaokao_policies_rules"],
+      "avoidCollections": []
+    },
+    {
+      "id": "policy_consult",
+      "name": "政策咨询",
+      "trigger": ["政策", "赋分", "提前批", "专项", "特招", "公费", "定向", "军警", "志愿规则", "调剂", "选科"],
+      "priorityCollections": ["gaokao_policies_rules", "gaokao_province_data"],
+      "fallbackCollections": ["gaokao_style_cases"],
+      "avoidCollections": []
+    },
+    {
+      "id": "score_tendency",
+      "name": "分数倾向",
+      "trigger": ["多少分", "能不能上", "稳不稳", "冲稳保", "位次", "投档线", "分数线", "录取概率"],
+      "priorityCollections": ["gaokao_score_rules", "gaokao_province_data"],
+      "fallbackCollections": ["gaokao_schools", "gaokao_majors", "gaokao_style_cases"],
+      "avoidCollections": []
+    },
+    {
+      "id": "family_emotion",
+      "name": "家庭情感",
+      "trigger": ["父母", "家庭", "压力", "迷茫", "焦虑", "纠结", "建议", "指导"],
+      "priorityCollections": ["gaokao_style_cases", "gaokao_majors"],
+      "fallbackCollections": [],
+      "avoidCollections": []
+    }
+  ]
+}
