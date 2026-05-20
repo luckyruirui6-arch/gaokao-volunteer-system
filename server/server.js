@@ -1,262 +1,77 @@
-require('dotenv').config();
-
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+const http = require('http');
 const fs = require('fs');
+const path = require('path');
+const { URL } = require('url');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
+const PORT = process.env.PORT || 3011;
+const ROOT = __dirname;
 
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
-
-const LLM_BASE_URL = process.env.LLM_BASE_URL;
-const LLM_MODEL = process.env.LLM_MODEL;
-const API_KEY = process.env.API_KEY;
-const EMBEDDINGS_URL = process.env.EMBEDDINGS_URL;
+const LLM_BASE_URL = process.env.LLM_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const LLM_MODEL = process.env.LLM_MODEL || 'qwen-plus';
+const API_KEY = process.env.API_KEY || '';
+const EMBEDDINGS_URL = process.env.EMBEDDINGS_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings';
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-v3';
-const QDRANT_URL = process.env.QDRANT_URL;
-const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
+const QDRANT_URL = process.env.QDRANT_URL || '';
+const QDRANT_API_KEY = process.env.QDRANT_API_KEY || '';
 
-function validateConfig() {
-  const missing = [];
-  if (!LLM_BASE_URL) missing.push('LLM_BASE_URL');
-  if (!LLM_MODEL) missing.push('LLM_MODEL');
-  if (!API_KEY) missing.push('API_KEY');
-  
-  if (missing.length > 0) {
-    console.error('❌ Missing required environment variables:');
-    missing.forEach(v => console.error(`  - ${v}`));
-    console.error('\nPlease set these environment variables in Render Console.');
-    process.exit(1);
-  }
-  
-  console.log('✅ Environment variables loaded successfully:');
-  console.log(`  LLM_BASE_URL: ${LLM_BASE_URL}`);
-  console.log(`  LLM_MODEL: ${LLM_MODEL}`);
-  console.log(`  Has API_KEY: ${API_KEY ? 'Yes' : 'No'}`);
-  console.log(`  Has EMBEDDINGS_URL: ${EMBEDDINGS_URL ? 'Yes' : 'No'}`);
-  console.log(`  Has QDRANT_URL: ${QDRANT_URL ? 'Yes' : 'No'}`);
+function log(...args) {
+  console.log(`[${new Date().toLocaleString()}]`, ...args);
 }
 
-validateConfig();
+function json(res, statusCode, payload) {
+  res.writeHead(statusCode, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  });
+  res.end(JSON.stringify(payload));
+}
 
-async function callLLM(messages) {
-  const isDashScope = LLM_BASE_URL.includes('dashscope');
-  
-  let headers = {
-    'Content-Type': 'application/json'
+function sendFile(res, filePath) {
+  const ext = path.extname(filePath).toLowerCase();
+  const map = {
+    '.html': 'text/html; charset=utf-8',
+    '.js': 'application/javascript; charset=utf-8',
+    '.css': 'text/css; charset=utf-8',
+    '.json': 'application/json; charset=utf-8',
   };
-  
-  if (isDashScope) {
-    headers['Authorization'] = `Bearer ${API_KEY}`;
-  } else {
-    headers['Authorization'] = `Bearer ${API_KEY}`;
-  }
-  
-  const body = {
-    model: LLM_MODEL,
-    messages: messages,
-    temperature: 0.7,
-    max_tokens: 2048
-  };
-  
-  console.log(`🔄 Calling LLM: ${LLM_BASE_URL}/chat/completions`);
-  console.log(`📦 Model: ${LLM_MODEL}`);
-  console.log(`📨 Message count: ${messages.length}`);
-  
   try {
-    const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
-      method: 'POST',
-      headers: headers,
-      body: JSON.stringify(body),
-      timeout: 60000
+    const content = fs.readFileSync(filePath);
+    res.writeHead(200, { 'Content-Type': map[ext] || 'text/plain; charset=utf-8' });
+    res.end(content);
+  } catch {
+    res.writeHead(404);
+    res.end('Not Found');
+  }
+}
+
+function readBody(req) {
+  return new Promise((resolve) => {
+    let raw = '';
+    req.on('data', (chunk) => {
+      raw += chunk;
+      if (raw.length > 2_000_000) req.destroy();
     });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ LLM API error: ${response.status}`);
-      console.error(`❌ Error body: ${errorText.substring(0, 500)}`);
-      throw new Error(`LLM API error: ${response.status} - ${errorText.substring(0, 200)}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error(`❌ Unexpected response format: ${JSON.stringify(data).substring(0, 500)}`);
-      throw new Error('Unexpected LLM response format');
-    }
-    
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error(`❌ LLM call failed: ${error.message}`);
-    throw error;
-  }
-}
-
-async function getEmbedding(text) {
-  if (!EMBEDDINGS_URL) {
-    throw new Error('Embeddings URL not configured');
-  }
-  
-  const response = await fetch(`${EMBEDDINGS_URL}/embeddings`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${API_KEY}`
-    },
-    body: JSON.stringify({
-      model: EMBEDDING_MODEL,
-      input: text.substring(0, 5000),
-      encoding_format: 'float'
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Embedding API error: ${response.status}`);
-  }
-  
-  const data = await response.json();
-  return data.data[0].embedding;
-}
-
-async function searchQdrant(embedding, collectionName = 'gaokao', limit = 5) {
-  if (!QDRANT_URL || !QDRANT_API_KEY) {
-    throw new Error('Qdrant not configured');
-  }
-  
-  const response = await fetch(`${QDRANT_URL}/collections/${collectionName}/points/search`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'api-key': QDRANT_API_KEY
-    },
-    body: JSON.stringify({
-      vector: embedding,
-      limit: limit,
-      with_payload: true
-    })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Qdrant API error: ${response.status}`);
-  }
-  
-  const data = await response.json();
-  return data.result.map(r => r.payload);
-}
-
-function loadCollegeData() {
-  const colleges = [];
-  const provinces = fs.readdirSync(path.join(__dirname, '../03_院校库'), { withFileTypes: true })
-    .filter(dir => dir.isDirectory())
-    .map(dir => dir.name);
-  
-  provinces.forEach(province => {
-    const provincePath = path.join(__dirname, '../03_院校库', province);
-    const files = fs.readdirSync(provincePath).filter(f => f.endsWith('.md'));
-    
-    files.forEach(file => {
-      const content = fs.readFileSync(path.join(provincePath, file), 'utf-8');
-      const name = file.replace('.md', '');
-      colleges.push({
-        name,
-        province,
-        content: content.substring(0, 500)
-      });
-    });
-  });
-  
-  return colleges;
-}
-
-function loadMajorData() {
-  const majors = [];
-  const files = fs.readdirSync(path.join(__dirname, '../04_专业库'))
-    .filter(f => f.endsWith('.md') && !f.includes('(1)'));
-  
-  files.forEach(file => {
-    const content = fs.readFileSync(path.join(__dirname, '../04_专业库', file), 'utf-8');
-    const name = file.replace('.md', '');
-    majors.push({
-      name,
-      content: content.substring(0, 500)
-    });
-  });
-  
-  return majors;
-}
-
-app.get('/', (req, res) => {
-  res.json({ 
-    status: 'ok', 
-    message: 'Gaokao Volunteer System API',
-    config: {
-      llmModel: LLM_MODEL,
-      llmBaseUrl: LLM_BASE_URL,
-      hasEmbeddings: !!EMBEDDINGS_URL,
-      hasQdrant: !!QDRANT_URL
-    }
-  });
-});
-
-app.get('/api/colleges', (req, res) => {
-  const { province, keyword } = req.query;
-  let colleges = loadCollegeData();
-  
-  if (province) {
-    colleges = colleges.filter(c => c.province.includes(province));
-  }
-  
-  if (keyword) {
-    colleges = colleges.filter(c => c.name.includes(keyword));
-  }
-  
-  res.json(colleges.slice(0, 20));
-});
-
-app.get('/api/majors', (req, res) => {
-  const { keyword } = req.query;
-  let majors = loadMajorData();
-  
-  if (keyword) {
-    majors = majors.filter(m => m.name.includes(keyword));
-  }
-  
-  res.json(majors.slice(0, 20));
-});
-
-app.get('/api/provinces', (req, res) => {
-  const provinces = fs.readdirSync(path.join(__dirname, '../03_院校库'), { withFileTypes: true })
-    .filter(dir => dir.isDirectory())
-    .map(dir => dir.name);
-  
-  res.json(provinces);
-});
-
-app.post('/api/chat', async (req, res) => {
-  try {
-    const { message, history, useVectorDb = false } = req.body;
-    
-    let context = '';
-    
-    if (useVectorDb && QDRANT_URL && EMBEDDINGS_URL) {
+    req.on('end', () => {
+      if (!raw) return resolve({});
       try {
-        const embedding = await getEmbedding(message);
-        const results = await searchQdrant(embedding, 'gaokao', 3);
-        context = results.map(r => r.content).join('\n\n');
-      } catch (vecError) {
-        console.warn('Vector DB search failed:', vecError.message);
+        resolve(JSON.parse(raw));
+      } catch {
+        resolve({});
       }
-    }
-    
-    const systemPrompt = `你是一位专业的高考志愿填报顾问。请根据用户的问题，结合提供的院校和专业数据，给出专业、详细、有针对性的建议。
-    
-参考资料：
-${context || '暂无额外参考资料'}
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
+async function callLLM(message) {
+  if (!API_KEY) {
+    throw new Error('API_KEY not configured');
+  }
+
+  const systemPrompt = `你是一位专业的高考志愿填报顾问，风格类似张雪峰。请根据用户的问题，给出专业、详细、有针对性的建议。
 
 用户可能问的问题类型包括：
 1. 院校介绍和评价
@@ -265,75 +80,88 @@ ${context || '暂无额外参考资料'}
 4. 分数线参考
 5. 职业规划建议
 
-请用友好、亲切的语气回答，确保信息准确可靠。`;
-    
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      ...(history || []).map(h => ({
-        role: h.role === 'user' ? 'user' : 'assistant',
-        content: h.content
-      })),
-      { role: 'user', content: message }
-    ];
-    
-    const response = await callLLM(messages);
-    res.json({ response, hasContext: !!context });
-  } catch (error) {
-    console.error('Chat error:', error);
-    res.status(500).json({ 
-      error: '服务器内部错误', 
-      details: error.message,
-      llmUrl: LLM_BASE_URL
-    });
-  }
-});
+请用友好、亲切的语气回答，确保信息准确可靠。先给结论，再讲原因、风险和替代方案。`;
 
-app.post('/api/embed', async (req, res) => {
-  try {
-    const { text } = req.body;
-    const embedding = await getEmbedding(text);
-    res.json({ embedding });
-  } catch (error) {
-    console.error('Embedding error:', error);
-    res.status(500).json({ error: '嵌入服务错误', details: error.message });
-  }
-});
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: message }
+  ];
 
-app.post('/api/upsert', async (req, res) => {
-  try {
-    if (!QDRANT_URL || !QDRANT_API_KEY) {
-      return res.status(400).json({ error: 'Qdrant not configured' });
+  const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify({
+      model: LLM_MODEL,
+      messages: messages,
+      temperature: 0.7,
+      max_tokens: 2048
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`LLM API error: ${response.status} - ${errorText.substring(0, 200)}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '没有获取到回答';
+}
+
+const server = http.createServer(async (req, res) => {
+  if (req.method === 'OPTIONS') {
+    return json(res, 200, { ok: true });
+  }
+
+  const reqUrl = new URL(req.url, `http://${req.headers.host}`);
+
+  if (reqUrl.pathname === '/') {
+    return sendFile(res, path.join(ROOT, 'index.html'));
+  }
+
+  if (reqUrl.pathname === '/chat' || reqUrl.pathname === '/chat.html') {
+    return sendFile(res, path.join(ROOT, 'chat.html'));
+  }
+
+  if (reqUrl.pathname === '/api/chat' && req.method === 'POST') {
+    try {
+      const body = await readBody(req);
+      const prompt = body.prompt || body.message || '';
+      
+      if (!prompt) {
+        return json(res, 400, { error: '缺少问题内容' });
+      }
+
+      log(`收到问题: ${prompt.substring(0, 50)}...`);
+      const answer = await callLLM(prompt);
+      log(`回答完成`);
+      
+      return json(res, 200, { 
+        answer: answer,
+        route: 'direct_llm',
+        sources: []
+      });
+    } catch (error) {
+      log(`错误: ${error.message}`);
+      return json(res, 500, { error: error.message });
     }
-    
-    const { collectionName = 'gaokao', points } = req.body;
-    
-    const response = await fetch(`${QDRANT_URL}/collections/${collectionName}/points/upsert`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': QDRANT_API_KEY
-      },
-      body: JSON.stringify({ points })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Qdrant API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    console.error('Upsert error:', error);
-    res.status(500).json({ error: '向量数据库错误', details: error.message });
   }
+
+  const filePath = path.join(ROOT, reqUrl.pathname.replace(/^\/+/, ''));
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    return sendFile(res, filePath);
+  }
+
+  res.writeHead(404);
+  res.end('Not Found');
 });
 
-app.get('/chat.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'chat.html'));
-});
-
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on port ${PORT}`);
-  console.log(`📍 API: http://localhost:${PORT}/`);
-  console.log(`💬 Chat: http://localhost:${PORT}/chat.html`);
+server.listen(PORT, HOST, () => {
+  console.log(`\n🚀 高考志愿咨询系统启动成功！`);
+  console.log(`📍 端口: ${PORT}`);
+  console.log(`💬 访问地址: http://localhost:${PORT}/chat.html`);
+  console.log(`📦 LLM: ${LLM_BASE_URL}`);
+  console.log(`🔑 API Key: ${API_KEY ? '已配置' : '未配置'}`);
 });
