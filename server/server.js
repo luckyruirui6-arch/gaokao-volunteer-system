@@ -65,21 +65,35 @@ async function callLLM(messages) {
   
   console.log(`🔄 Calling LLM: ${LLM_BASE_URL}/chat/completions`);
   console.log(`📦 Model: ${LLM_MODEL}`);
+  console.log(`📨 Message count: ${messages.length}`);
   
-  const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(body)
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`❌ LLM API error: ${response.status} - ${errorText}`);
-    throw new Error(`LLM API error: ${response.status}`);
+  try {
+    const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(body),
+      timeout: 60000
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`❌ LLM API error: ${response.status}`);
+      console.error(`❌ Error body: ${errorText.substring(0, 500)}`);
+      throw new Error(`LLM API error: ${response.status} - ${errorText.substring(0, 200)}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error(`❌ Unexpected response format: ${JSON.stringify(data).substring(0, 500)}`);
+      throw new Error('Unexpected LLM response format');
+    }
+    
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error(`❌ LLM call failed: ${error.message}`);
+    throw error;
   }
-  
-  const data = await response.json();
-  return data.choices[0].message.content;
 }
 
 async function getEmbedding(text) {
