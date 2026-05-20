@@ -328,7 +328,7 @@ app.post('/api/upsert', async (req, res) => {
 });
 
 app.get('/chat.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'chat.html'));
+  res.sendFile(path.join(__dirname, 'chat.html'));
 });
 
 app.listen(PORT, () => {
