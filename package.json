@@ -4,7 +4,15 @@
   "description": "Gaokao Volunteer Consultation System",
   "main": "server/server.js",
   "scripts": {
-    "start": "node server/server.js"
+    "start": "node server/server.js",
+    "dev": "node server/server.js",
+    "import": "node scripts/import_data.js",
+    "build": "npm install"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
   },
   "engines": {
     "node": ">=18"

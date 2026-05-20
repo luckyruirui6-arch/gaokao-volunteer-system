@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>高考志愿咨询系统</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    
+    .header p {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    
+    .chat-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+    }
+    
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .message {
+      max-width: 75%;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border-radius: 18px;
+      line-height: 1.5;
+    }
+    
+    .message.user {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    
+    .message.assistant {
+      background: #f1f3f4;
+      color: #333;
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    
+    .message.system {
+      background: #e8f5e9;
+      color: #2e7d32;
+      align-self: center;
+      font-size: 12px;
+      max-width: 90%;
+      text-align: center;
+    }
+    
+    .typing-indicator {
+      display: flex;
+      padding: 12px 16px;
+      background: #f1f3f4;
+      border-radius: 18px;
+      align-self: flex-start;
+    }
+    
+    .typing-indicator span {
+      width: 8px;
+      height: 8px;
+      background: #999;
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: typing 1.4s infinite ease-in-out;
+    }
+    
+    .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+    
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); }
+      30% { transform: translateY(-4px); }
+    }
+    
+    .input-area {
+      padding: 16px;
+      border-top: 1px solid #eee;
+      display: flex;
+      gap: 12px;
+    }
+    
+    .input-area input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #ddd;
+      border-radius: 24px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    
+    .input-area input:focus {
+      border-color: #667eea;
+    }
+    
+    .input-area button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .input-area button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .input-area button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .quick-questions {
+      padding: 16px;
+      background: #f8f9fa;
+      border-top: 1px solid #eee;
+    }
+    
+    .quick-questions p {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 8px;
+    }
+    
+    .quick-questions button {
+      padding: 8px 16px;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 16px;
+      font-size: 12px;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .quick-questions button:hover {
+      background: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+    
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .error-message {
+      background: #ffebee;
+      color: #c62828;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎓 高考志愿咨询系统</h1>
+      <p>AI 驱动的专业志愿填报顾问</p>
+    </div>
+    
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="message system">
+          您好！我是您的高考志愿填报顾问。请问有什么可以帮助您的？
+        </div>
+      </div>
+      
+      <div class="quick-questions">
+        <p>快捷提问：</p>
+        <button onclick="sendQuickQuestion('推荐一些计算机专业强的大学')">计算机专业强校</button>
+        <button onclick="sendQuickQuestion('如何选择适合自己的专业')">专业选择建议</button>
+        <button onclick="sendQuickQuestion('北京有哪些好大学')">北京院校推荐</button>
+        <button onclick="sendQuickQuestion('临床医学专业怎么样')">临床医学分析</button>
+        <button onclick="sendQuickQuestion('志愿填报需要注意什么')">填报注意事项</button>
+      </div>
+      
+      <div class="input-area">
+        <input 
+          type="text" 
+          id="userInput" 
+          placeholder="请输入您的问题..." 
+          onkeydown="if(event.keyCode === 13) sendMessage()"
+        />
+        <button id="sendBtn" onclick="sendMessage()">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatMessages = document.getElementById('chatMessages');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    let chatHistory = [];
+
+    function addMessage(content, role) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${role}`;
+      messageDiv.textContent = content;
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function addTypingIndicator() {
+      const typingDiv = document.createElement('div');
+      typingDiv.className = 'typing-indicator';
+      typingDiv.innerHTML = '<span></span><span></span><span></span>';
+      chatMessages.appendChild(typingDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return typingDiv;
+    }
+
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      userInput.value = '';
+      sendBtn.disabled = true;
+
+      addMessage(message, 'user');
+      chatHistory.push({ role: 'user', content: message });
+
+      const typingIndicator = addTypingIndicator();
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            message: message,
+            history: chatHistory.slice(-5)
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          addMessage(data.response, 'assistant');
+          chatHistory.push({ role: 'assistant', content: data.response });
+        } else {
+          addMessage(`❌ 错误：${data.error || '服务器错误'}`, 'system');
+        }
+      } catch (error) {
+        addMessage(`❌ 网络错误：${error.message}`, 'system');
+      } finally {
+        typingIndicator.remove();
+        sendBtn.disabled = false;
+      }
+    }
+
+    function sendQuickQuestion(question) {
+      userInput.value = question;
+      sendMessage();
+    }
+  </script>
+</body>
+</html>
