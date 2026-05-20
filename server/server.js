@@ -125,6 +125,44 @@ const server = http.createServer(async (req, res) => {
     return sendFile(res, path.join(ROOT, 'chat.html'));
   }
 
+  if (reqUrl.pathname === '/api/config') {
+    if (req.method === 'GET') {
+      return json(res, 200, {
+        provider: 'openai-compatible',
+        baseUrl: LLM_BASE_URL,
+        workspaceSlug: 'zhiyuan-consultant',
+        maxConcurrency: 3,
+        queueStepMs: 2400,
+        queueVisualSeconds: 12,
+        qdrantUrl: QDRANT_URL || 'disabled',
+        embeddingsUrl: EMBEDDINGS_URL,
+        embeddingModel: EMBEDDING_MODEL,
+        topKPerCollection: 3,
+        adEnabled: false,
+        adMode: 'local-timer',
+        adDebugBypass: true,
+        adDurationSeconds: 30,
+        adRewardQuestions: 5,
+      });
+    }
+    if (req.method === 'POST') {
+      return json(res, 200, { config: {} });
+    }
+  }
+
+  if (reqUrl.pathname === '/api/status') {
+    return json(res, 200, {
+      activeRequests: 0,
+      maxConcurrency: 3,
+      queueVisualSeconds: 12,
+      queueStepMs: 2400,
+    });
+  }
+
+  if (reqUrl.pathname === '/api/ad/reward') {
+    return json(res, 200, { granted: 5 });
+  }
+
   if (reqUrl.pathname === '/api/chat' && req.method === 'POST') {
     try {
       const body = await readBody(req);
