@@ -160,14 +160,20 @@ async function callLLM(message, context = []) {
     throw new Error('API_KEY not configured');
   }
 
+  if (!message || message.trim() === '') {
+    throw new Error('Message content cannot be empty');
+  }
+
   let contextText = '';
   if (context.length > 0) {
     contextText = `以下是相关参考资料，请优先根据这些资料回答问题：\n\n`;
     context.forEach((item, index) => {
-      contextText += `【参考${index + 1}】(${item.source})\n${item.content.substring(0, 300)}\n\n`;
+      contextText += `【参考${index + 1}】(${item.source || '未知来源'})\n${item.content.substring(0, 300)}\n\n`;
     });
     contextText += `---\n\n`;
   }
+
+  const userContent = contextText + message;
 
   const systemPrompt = `你是一位专业的高考志愿填报顾问，风格类似张雪峰。请根据用户的问题，结合提供的参考资料，给出专业、详细、有针对性的建议。
 
@@ -186,7 +192,7 @@ async function callLLM(message, context = []) {
 
   const messages = [
     { role: 'system', content: systemPrompt },
-    { role: 'user', content: contextText + message }
+    { role: 'user', content: userContent }
   ];
 
   const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
