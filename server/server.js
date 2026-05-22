@@ -7,11 +7,11 @@ const HOST = '0.0.0.0';
 const PORT = process.env.PORT || 3011;
 const ROOT = __dirname;
 
-const LLM_BASE_URL = process.env.LLM_BASE_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-const LLM_MODEL = process.env.LLM_MODEL || 'qwen-plus';
+const LLM_BASE_URL = process.env.LLM_BASE_URL || 'https://api.deepseek.com/v1';
+const LLM_MODEL = process.env.LLM_MODEL || 'deepseek-chat';
 const API_KEY = process.env.API_KEY || '';
-const EMBEDDINGS_URL = process.env.EMBEDDINGS_URL || 'https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings';
-const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-v3';
+const EMBEDDINGS_URL = process.env.EMBEDDINGS_URL || 'https://api.deepseek.com/v1/embeddings';
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-ada-002';
 const QDRANT_URL = process.env.QDRANT_URL || '';
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY || '';
 

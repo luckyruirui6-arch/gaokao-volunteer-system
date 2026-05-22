@@ -2,30 +2,21 @@ services:
   - type: web
     name: gaokao-volunteer-system
     env: node
-    plan: starter
+    region: oregon
     buildCommand: npm install
-    startCommand: node server/server.js
-    workingDirectory: ./
-    healthCheckPath: /
+    startCommand: npm start
     envVars:
-      - key: NODE_ENV
-        value: production
-      - key: PORT
-        fromService:
-          type: web
-          name: gaokao-volunteer-system
-          envVarKey: PORT
+      - key: NODE_VERSION
+        value: "18"
       - key: API_KEY
         sync: false
       - key: LLM_BASE_URL
-        sync: false
+        value: "https://api.deepseek.com/v1"
       - key: LLM_MODEL
-        sync: false
+        value: "deepseek-chat"
       - key: EMBEDDINGS_URL
-        sync: false
+        value: "https://api.deepseek.com/v1/embeddings"
       - key: EMBEDDING_MODEL
-        sync: false
-      - key: QDRANT_URL
-        sync: false
-      - key: QDRANT_API_KEY
-        sync: false
+        value: "text-embedding-ada-002"
+      - key: PORT
+        value: "3011"
