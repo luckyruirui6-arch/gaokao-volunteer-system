@@ -15,6 +15,16 @@ const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-ada-002';
 const QDRANT_URL = process.env.QDRANT_URL || '';
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY || '';
 
+const KNOWLEDGE_COLLECTIONS = [
+  { name: 'policies', prefix: '01_政策规则' },
+  { name: 'provinces', prefix: '02_省份数据' },
+  { name: 'schools', prefix: '03_院校库' },
+  { name: 'majors', prefix: '04_专业库' },
+  { name: 'styles', prefix: '05_张雪峰风格库' },
+  { name: 'cases', prefix: '06_案例库' },
+  { name: 'scores', prefix: '07_录取数据' },
+];
+
 function log(...args) {
   console.log(`[${new Date().toLocaleString()}]`, ...args);
 }
@@ -66,12 +76,100 @@ function readBody(req) {
   });
 }
 
-async function callLLM(message) {
+async function createEmbedding(text) {
   if (!API_KEY) {
     throw new Error('API_KEY not configured');
   }
 
-  const systemPrompt = `你是一位专业的高考志愿填报顾问，风格类似张雪峰。请根据用户的问题，给出专业、详细、有针对性的建议。
+  const response = await fetch(`${EMBEDDINGS_URL}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${API_KEY}`
+    },
+    body: JSON.stringify({
+      model: EMBEDDING_MODEL,
+      input: text
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Embedding API error: ${response.status} - ${errorText.substring(0, 200)}`);
+  }
+
+  const data = await response.json();
+  return data.data?.[0]?.embedding || [];
+}
+
+async function searchQdrant(embedding, collectionName, topK = 3) {
+  if (!QDRANT_URL || !QDRANT_API_KEY) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${QDRANT_URL}/collections/${collectionName}/points/search`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': QDRANT_API_KEY
+      },
+      body: JSON.stringify({
+        vector: embedding,
+        limit: topK,
+        with_payload: true,
+        with_vectors: false
+      })
+    });
+
+    if (!response.ok) {
+      log(`Qdrant search failed for ${collectionName}: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return data.result?.map(item => ({
+      score: item.score,
+      content: item.payload?.content || '',
+      source: item.payload?.source || '',
+      collection: collectionName
+    })) || [];
+  } catch (error) {
+    log(`Qdrant error: ${error.message}`);
+    return [];
+  }
+}
+
+async function retrieveKnowledge(query) {
+  const embedding = await createEmbedding(query);
+  if (!embedding.length) {
+    return [];
+  }
+
+  const allResults = [];
+  for (const coll of KNOWLEDGE_COLLECTIONS) {
+    const results = await searchQdrant(embedding, coll.name, 3);
+    allResults.push(...results);
+  }
+
+  return allResults.sort((a, b) => b.score - a.score).slice(0, 10);
+}
+
+async function callLLM(message, context = []) {
+  if (!API_KEY) {
+    throw new Error('API_KEY not configured');
+  }
+
+  let contextText = '';
+  if (context.length > 0) {
+    contextText = `以下是相关参考资料，请优先根据这些资料回答问题：\n\n`;
+    context.forEach((item, index) => {
+      contextText += `【参考${index + 1}】(${item.source})\n${item.content.substring(0, 300)}\n\n`;
+    });
+    contextText += `---\n\n`;
+  }
+
+  const systemPrompt = `你是一位专业的高考志愿填报顾问，风格类似张雪峰。请根据用户的问题，结合提供的参考资料，给出专业、详细、有针对性的建议。
 
 用户可能问的问题类型包括：
 1. 院校介绍和评价
@@ -80,11 +178,15 @@ async function callLLM(message) {
 4. 分数线参考
 5. 职业规划建议
 
-请用友好、亲切的语气回答，确保信息准确可靠。先给结论，再讲原因、风险和替代方案。`;
+回答规则：
+1. 如果有参考资料，请优先使用参考资料中的信息
+2. 如果参考资料不足，可以结合你的通用知识，但要明确说明这是你的分析
+3. 不要编造分数、位次、投档线等具体数据
+4. 用友好、亲切的语气回答，先给结论，再讲原因、风险和替代方案`;
 
   const messages = [
     { role: 'system', content: systemPrompt },
-    { role: 'user', content: message }
+    { role: 'user', content: contextText + message }
   ];
 
   const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
@@ -173,13 +275,30 @@ const server = http.createServer(async (req, res) => {
       }
 
       log(`收到问题: ${prompt.substring(0, 50)}...`);
-      const answer = await callLLM(prompt);
-      log(`回答完成`);
+
+      let knowledge = [];
+      let route = 'direct_llm';
+      
+      if (QDRANT_URL && QDRANT_API_KEY) {
+        log('正在检索知识库...');
+        knowledge = await retrieveKnowledge(prompt);
+        log(`检索到 ${knowledge.length} 条相关资料`);
+        
+        if (knowledge.length > 0) {
+          route = 'knowledge_base';
+        }
+      }
+
+      log('正在生成回答...');
+      const answer = await callLLM(prompt, knowledge);
+      log('回答完成');
+      
+      const sources = knowledge.map(k => k.source);
       
       return json(res, 200, { 
         answer: answer,
-        route: 'direct_llm',
-        sources: []
+        route: route,
+        sources: sources
       });
     } catch (error) {
       log(`错误: ${error.message}`);
@@ -202,4 +321,5 @@ server.listen(PORT, HOST, () => {
   console.log(`💬 访问地址: http://localhost:${PORT}/chat.html`);
   console.log(`📦 LLM: ${LLM_BASE_URL}`);
   console.log(`🔑 API Key: ${API_KEY ? '已配置' : '未配置'}`);
+  console.log(`📚 向量数据库: ${QDRANT_URL ? '已配置' : '未配置'}`);
 });
