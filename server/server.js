@@ -168,7 +168,8 @@ async function callLLM(message, context = []) {
   if (context.length > 0) {
     contextText = `以下是相关参考资料，请优先根据这些资料回答问题：\n\n`;
     context.forEach((item, index) => {
-      contextText += `【参考${index + 1}】(${item.source || '未知来源'})\n${item.content.substring(0, 300)}\n\n`;
+      const content = item.content && item.content.trim() ? item.content.substring(0, 300) : '暂无内容';
+      contextText += `【参考${index + 1}】(${item.source || '未知来源'})\n${content}\n\n`;
     });
     contextText += `---\n\n`;
   }
