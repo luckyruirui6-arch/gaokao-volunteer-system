@@ -202,7 +202,10 @@ async function callLLM(message, context = []) {
   ];
   
   log(`发送消息数量: ${messages.length}`);
-  log(`消息1 content长度: ${messages[1]?.content?.length || 0}`);
+  log(`消息0 (system) content长度: ${messages[0]?.content?.length || 0}`);
+  log(`消息1 (user) content长度: ${messages[1]?.content?.length || 0}`);
+  log(`消息1 content存在: ${!!messages[1]?.content}`);
+  log(`消息1 content类型: ${typeof messages[1]?.content}`);
 
   const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
     method: 'POST',
@@ -375,4 +378,6 @@ server.listen(PORT, HOST, () => {
   console.log(`📦 LLM: ${LLM_BASE_URL}`);
   console.log(`🔑 API Key: ${API_KEY ? '已配置' : '未配置'}`);
   console.log(`📚 向量数据库: ${QDRANT_URL ? '已配置' : '未配置'}`);
+  console.log(`📂 当前目录: ${__dirname}`);
+  console.log(`📂 根目录: ${ROOT}`);
 });
