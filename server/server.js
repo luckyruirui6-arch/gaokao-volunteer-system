@@ -280,6 +280,39 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { granted: 5 });
   }
 
+  if (reqUrl.pathname === '/api/test' && req.method === 'POST') {
+    try {
+      const body = await readBody(req);
+      const prompt = body.prompt || 'hello';
+      
+      const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${API_KEY}`
+        },
+        body: JSON.stringify({
+          model: LLM_MODEL,
+          messages: [
+            { role: 'system', content: '你是一个助手' },
+            { role: 'user', content: prompt }
+          ],
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return json(res, 500, { error: `LLM API error: ${response.status}`, details: errorText });
+      }
+
+      const data = await response.json();
+      return json(res, 200, { answer: data.choices?.[0]?.message?.content });
+    } catch (error) {
+      return json(res, 500, { error: error.message });
+    }
+  }
+
   if (reqUrl.pathname === '/api/chat' && req.method === 'POST') {
     try {
       const body = await readBody(req);
@@ -296,11 +329,16 @@ const server = http.createServer(async (req, res) => {
       
       if (QDRANT_URL && QDRANT_API_KEY) {
         log('正在检索知识库...');
-        knowledge = await retrieveKnowledge(prompt);
-        log(`检索到 ${knowledge.length} 条相关资料`);
-        
-        if (knowledge.length > 0) {
-          route = 'knowledge_base';
+        try {
+          knowledge = await retrieveKnowledge(prompt);
+          log(`检索到 ${knowledge.length} 条相关资料`);
+          
+          if (knowledge.length > 0) {
+            route = 'knowledge_base';
+          }
+        } catch (e) {
+          log(`知识库检索失败，跳过: ${e.message}`);
+          knowledge = [];
         }
       }
 
