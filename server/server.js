@@ -165,16 +165,21 @@ async function callLLM(message, context = []) {
   }
 
   let contextText = '';
-  if (context.length > 0) {
+  if (context && context.length > 0) {
     contextText = `以下是相关参考资料，请优先根据这些资料回答问题：\n\n`;
     context.forEach((item, index) => {
-      const content = item.content && item.content.trim() ? item.content.substring(0, 300) : '暂无内容';
-      contextText += `【参考${index + 1}】(${item.source || '未知来源'})\n${content}\n\n`;
+      const content = item && item.content && item.content.trim() ? item.content.substring(0, 300) : '暂无内容';
+      const source = item && item.source ? item.source : '未知来源';
+      contextText += `【参考${index + 1}】(${source})\n${content}\n\n`;
     });
     contextText += `---\n\n`;
   }
 
-  const userContent = contextText + message;
+  const userContent = (contextText || '') + message;
+  
+  if (!userContent || userContent.trim() === '') {
+    throw new Error('User content cannot be empty');
+  }
 
   const systemPrompt = `你是一位专业的高考志愿填报顾问，风格类似张雪峰。请根据用户的问题，结合提供的参考资料，给出专业、详细、有针对性的建议。
 
@@ -195,6 +200,9 @@ async function callLLM(message, context = []) {
     { role: 'system', content: systemPrompt },
     { role: 'user', content: userContent }
   ];
+  
+  log(`发送消息数量: ${messages.length}`);
+  log(`消息1 content长度: ${messages[1]?.content?.length || 0}`);
 
   const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
     method: 'POST',
