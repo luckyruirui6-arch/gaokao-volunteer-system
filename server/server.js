@@ -69,12 +69,15 @@ async function callLLM(messages) {
   console.log(`📨 Message count: ${messages.length}`);
   
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
     const response = await fetch(`${LLM_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: headers,
       body: JSON.stringify(body),
-      timeout: 60000
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -239,7 +242,9 @@ app.get('/api/provinces', (req, res) => {
 
 app.post('/api/chat', async (req, res) => {
   try {
-    const { message, history, useVectorDb = false } = req.body;
+    const message = req.body.message || req.body.prompt || '';
+    const history = req.body.history || [];
+    const useVectorDb = req.body.useVectorDb !== undefined ? req.body.useVectorDb : false;
     
     let context = '';
     
@@ -277,7 +282,7 @@ ${context || '暂无额外参考资料'}
     ];
     
     const response = await callLLM(messages);
-    res.json({ response, hasContext: !!context });
+    res.json({ answer: response, response, hasContext: !!context });
   } catch (error) {
     console.error('Chat error:', error);
     res.status(500).json({ 

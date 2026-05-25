@@ -3,8 +3,8 @@ const path = require('path');
 
 const QDRANT_URL = 'http://127.0.0.1:6333';
 const QDRANT_API_KEY = '';
-const EMBEDDINGS_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings';
-const API_KEY = 'sk-c66f556dac644aa7b40e52f1bda10eee';
+const EMBEDDINGS_URL = 'https://api.deepseek.com/v1/embeddings';
+const API_KEY = process.env.API_KEY || '';
 
 const COLLECTIONS = [
   { id: 'gaokao_schools', dir: '03_院校库' },

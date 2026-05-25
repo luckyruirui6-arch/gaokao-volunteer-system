@@ -1,8 +1,8 @@
 {
   "provider": "openai-compatible",
-  "baseUrl": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-  "workspaceSlug": "qwen-plus",
-  "apiKey": "sk-c66f556dac644aa7b40e52f1bda10eee",
+  "baseUrl": "https://api.deepseek.com/v1",
+  "workspaceSlug": "deepseek-chat",
+  "apiKey": "",
   "maxConcurrency": 5,
   "queueStepMs": 2400,
   "queueVisualSeconds": 12,

@@ -2,9 +2,9 @@ const APP_QUOTA_KEY = "zhiyuan-jingxiang-ad-quota";
 
 const defaultAdminConfig = {
   provider: "openai-compatible",
-  baseUrl: "https://integrate.api.nvidia.com/v1",
-  workspaceSlug: "z-ai/glm5",
-  apiKey: "[REDACTED]",
+  baseUrl: "https://api.deepseek.com/v1",
+  workspaceSlug: "deepseek-chat",
+  apiKey: "",
   maxConcurrency: 1,
   queueStepMs: 2400,
   queueVisualSeconds: 12,
