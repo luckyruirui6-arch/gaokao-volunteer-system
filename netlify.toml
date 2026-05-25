@@ -1,0 +1,12 @@
+[build]
+  command = "npm install"
+  publish = "server"
+  functions = "netlify/functions"
+
+# 所有 /api/* 请求路由到 Netlify Function
+# 静态文件（HTML/CSS/JS）由 Netlify CDN 直接托管
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api"
+  status = 200
+  force = true

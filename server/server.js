@@ -10,8 +10,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname));
+
+// 静态文件 - 仅在非 Netlify 环境生效（Netlify 由 CDN 直接托管静态文件）
+const isNetlify = !!process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME;
+if (!isNetlify) {
+  app.use(express.static(path.join(__dirname, 'public')));
+  app.use(express.static(__dirname));
+}
 
 const LLM_BASE_URL = process.env.LLM_BASE_URL;
 const LLM_MODEL = process.env.LLM_MODEL;
@@ -20,6 +25,21 @@ const EMBEDDINGS_URL = process.env.EMBEDDINGS_URL;
 const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL || 'text-embedding-v3';
 const QDRANT_URL = process.env.QDRANT_URL;
 const QDRANT_API_KEY = process.env.QDRANT_API_KEY;
+
+// 数据目录 - 兼容多种运行环境
+function getDataRoot() {
+  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  // 尝试 server 目录的上级（本地开发 server.js 运行）
+  const localRoot = path.resolve(__dirname, '..');
+  if (fs.existsSync(path.join(localRoot, '03_院校库'))) return localRoot;
+  // 尝试 Netlify Function 的上级（netlify/functions -> ../../）
+  const netlifyRoot = path.resolve(__dirname, '../..');
+  if (fs.existsSync(path.join(netlifyRoot, '03_院校库'))) return netlifyRoot;
+  // 回退到 cwd
+  return process.cwd();
+}
+
+const DATA_ROOT = getDataRoot();
 
 function validateConfig() {
   const missing = [];
@@ -30,8 +50,11 @@ function validateConfig() {
   if (missing.length > 0) {
     console.error('❌ Missing required environment variables:');
     missing.forEach(v => console.error(`  - ${v}`));
-    console.error('\nPlease set these environment variables in Render Console.');
-    process.exit(1);
+    if (!isNetlify) {
+      console.error('\nPlease set these environment variables in Render Console or .env file.');
+      process.exit(1);
+    }
+    return;
   }
   
   console.log('✅ Environment variables loaded successfully:');
@@ -40,6 +63,7 @@ function validateConfig() {
   console.log(`  Has API_KEY: ${API_KEY ? 'Yes' : 'No'}`);
   console.log(`  Has EMBEDDINGS_URL: ${EMBEDDINGS_URL ? 'Yes' : 'No'}`);
   console.log(`  Has QDRANT_URL: ${QDRANT_URL ? 'Yes' : 'No'}`);
+  console.log(`  DATA_ROOT: ${DATA_ROOT}`);
 }
 
 validateConfig();
@@ -154,12 +178,14 @@ async function searchQdrant(embedding, collectionName = 'gaokao', limit = 5) {
 
 function loadCollegeData() {
   const colleges = [];
-  const provinces = fs.readdirSync(path.join(__dirname, '../03_院校库'), { withFileTypes: true })
+  const collegeDir = path.join(DATA_ROOT, '03_院校库');
+  if (!fs.existsSync(collegeDir)) return colleges;
+  const provinces = fs.readdirSync(collegeDir, { withFileTypes: true })
     .filter(dir => dir.isDirectory())
     .map(dir => dir.name);
   
   provinces.forEach(province => {
-    const provincePath = path.join(__dirname, '../03_院校库', province);
+    const provincePath = path.join(collegeDir, province);
     const files = fs.readdirSync(provincePath).filter(f => f.endsWith('.md'));
     
     files.forEach(file => {
@@ -178,11 +204,13 @@ function loadCollegeData() {
 
 function loadMajorData() {
   const majors = [];
-  const files = fs.readdirSync(path.join(__dirname, '../04_专业库'))
+  const majorDir = path.join(DATA_ROOT, '04_专业库');
+  if (!fs.existsSync(majorDir)) return majors;
+  const files = fs.readdirSync(majorDir)
     .filter(f => f.endsWith('.md') && !f.includes('(1)'));
   
   files.forEach(file => {
-    const content = fs.readFileSync(path.join(__dirname, '../04_专业库', file), 'utf-8');
+    const content = fs.readFileSync(path.join(majorDir, file), 'utf-8');
     const name = file.replace('.md', '');
     majors.push({
       name,
@@ -233,7 +261,9 @@ app.get('/api/majors', (req, res) => {
 });
 
 app.get('/api/provinces', (req, res) => {
-  const provinces = fs.readdirSync(path.join(__dirname, '../03_院校库'), { withFileTypes: true })
+  const collegeDir = path.join(DATA_ROOT, '03_院校库');
+  if (!fs.existsSync(collegeDir)) return res.json([]);
+  const provinces = fs.readdirSync(collegeDir, { withFileTypes: true })
     .filter(dir => dir.isDirectory())
     .map(dir => dir.name);
   
@@ -337,8 +367,13 @@ app.get('/chat.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'chat.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on port ${PORT}`);
-  console.log(`📍 API: http://localhost:${PORT}/`);
-  console.log(`💬 Chat: http://localhost:${PORT}/chat.html`);
-});
+// 仅在直接运行时启动 HTTP 服务器（非 Netlify/serverless 环境）
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`\n🚀 Server running on port ${PORT}`);
+    console.log(`📍 API: http://localhost:${PORT}/`);
+    console.log(`💬 Chat: http://localhost:${PORT}/chat.html`);
+  });
+}
+
+module.exports = app;

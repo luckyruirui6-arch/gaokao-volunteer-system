@@ -7,12 +7,14 @@
     "start": "node server/server.js",
     "dev": "node server/server.js",
     "import": "node scripts/import_data.js",
-    "build": "npm install"
+    "build": "npm install",
+    "netlify-build": "npm install"
   },
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "serverless-http": "^3.2.0"
   },
   "engines": {
     "node": ">=18"
