@@ -69,6 +69,9 @@ function validateConfig() {
 validateConfig();
 
 async function callLLM(messages) {
+  if (!LLM_BASE_URL || !API_KEY) {
+    throw new Error('LLM not configured: missing LLM_BASE_URL or API_KEY');
+  }
   const isDashScope = LLM_BASE_URL.includes('dashscope');
   
   let headers = {
@@ -270,7 +273,41 @@ app.get('/api/provinces', (req, res) => {
   res.json(provinces);
 });
 
+app.get('/api/status', (req, res) => {
+  res.json({
+    status: 'ok',
+    llmConfigured: !!(LLM_BASE_URL && LLM_MODEL && API_KEY),
+    maxConcurrency: 1,
+    activeRequests: 0,
+    queueVisualSeconds: 12,
+    queueStepMs: 2400
+  });
+});
+
+app.get('/api/config', (req, res) => {
+  res.json({
+    provider: 'openai-compatible',
+    maxConcurrency: 1,
+    adEnabled: false,
+    adMode: 'local-timer',
+    adDebugBypass: true,
+    adDurationSeconds: 30,
+    adRewardQuestions: 5
+  });
+});
+
+app.post('/api/ad/reward', (req, res) => {
+  res.json({ granted: 5 });
+});
+
 app.post('/api/chat', async (req, res) => {
+  if (!LLM_BASE_URL || !LLM_MODEL || !API_KEY) {
+    return res.status(503).json({
+      error: 'AI 服务未配置，请联系管理员设置环境变量 LLM_BASE_URL、LLM_MODEL 和 API_KEY。',
+      details: 'Missing required environment variables'
+    });
+  }
+
   try {
     const message = req.body.message || req.body.prompt || '';
     const history = req.body.history || [];
